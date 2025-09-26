@@ -5,17 +5,21 @@ const { BING_DEFAULT_RESULTS_PER_PAGE } = require('./const');
 const { utils: { log } } = Apify;
 
 Apify.main(async () => {
-    const input = await Apify.getInput();
+    const input = (await Apify.getInput()) ?? {};
     const {
-        queries,
+        queries = [],
         resultsPerPage,
         maxPagesPerQuery,
         marketCode,
         languageCode,
-        maxConcurrency,
-        csvFriendliness,
+        maxConcurrency = 10,
+        csvFriendliness = false,
         proxyConfig,
     } = input;
+
+    if (!Array.isArray(queries) || !queries.length) {
+        throw new Error('Input "queries" must be a non-empty array of search terms or Bing URLs.');
+    }
 
     const urls = getUrls(queries, marketCode, languageCode, resultsPerPage, maxPagesPerQuery);
     const requestList = await Apify.openRequestList('START', urls);
@@ -53,15 +57,22 @@ function getUrls(queries, marketCode, languageCode, resultsPerPage, maxPagesPerQ
     }
 
     // https://www.bing.com/search?q=student&setmkt=en-US&setLang=en"
-    for (const splittedQuery of queries) {
-        if (splittedQuery.startsWith('https://www.bing.com/search?q=')) {
-            const url = splittedQuery + parameters;
+    for (const rawQuery of queries) {
+        if (typeof rawQuery !== 'string' || !rawQuery.trim()) {
+            throw new Error('Queries must be non-empty strings.');
+        }
+
+        const trimmedQuery = rawQuery.trim();
+
+        if (trimmedQuery.startsWith('https://www.bing.com/search?')) {
+            const url = `${trimmedQuery}${parameters}`;
 
             if (maxPagesPerQuery > 1) {
                 getPagesPerQuery(url, resultsPerPage, maxPagesPerQuery).forEach((x) => result.push(x));
             } else { result.push(url); }
         } else {
-            const url = `https://www.bing.com/search?q=${splittedQuery.replaceAll(' ', '%20')}${parameters}`;
+            const encodedQuery = encodeURIComponent(trimmedQuery);
+            const url = `https://www.bing.com/search?q=${encodedQuery}${parameters}`;
             if (maxPagesPerQuery > 1) {
                 getPagesPerQuery(url, resultsPerPage, maxPagesPerQuery).forEach((x) => result.push(x));
             } else { result.push(url); }

@@ -98,7 +98,7 @@ exports.handleStart = async ({ request, $ }, csvFriendliness) => {
                 let url = $(el).find('.imgText').attr('href');
                 if (url) {
                     url = new URL(url, `https://www.bing.com`);
-                    img.url = url;
+                    img.url = url.href;
                     img.description = $(el).find('.imgText').text();
                     log.info(`[START]: Image - ${$(el).find('.imgText').text()}`);
                     images.push(img);
@@ -112,8 +112,8 @@ exports.handleStart = async ({ request, $ }, csvFriendliness) => {
         $('#b_results > .b_vidAns').each((_, vidEl) => {
             $(vidEl).find('.slide').each((_0, el) => {
                 let url = $(el).find('a').attr('href');
-                if (url[0] === '/') {
-                    url = new URL(url, `https://www.bing.com`);
+                if (url && url[0] === '/') {
+                    url = new URL(url, 'https://www.bing.com').href;
                 }
                 const video = { url };
                 const title = $(el).find('.mc_vtvc_title').text();
@@ -228,7 +228,8 @@ exports.handleStart = async ({ request, $ }, csvFriendliness) => {
                 recommended = {};
                 recommended.description = $(el).find('a').first().text();
                 log.info(`[START]: Page recommendation - ${recommended.description}`);
-                recommended.url = $(el).find('a').attr('href');
+                const href = $(el).find('a').attr('href');
+                recommended.url = href ? new URL(href, 'https://www.bing.com').href : undefined;
                 recommendations.push(recommended);
             });
             algo.recommendations = recommendations;
@@ -243,7 +244,7 @@ exports.handleStart = async ({ request, $ }, csvFriendliness) => {
             for (const key of Object.keys(urlResults)) {
                 page[key] = urlResults[key];
             }
-            Apify.pushData(page);
+            await Apify.pushData(page);
         }
         return;
     }
@@ -259,7 +260,8 @@ exports.handleStart = async ({ request, $ }, csvFriendliness) => {
                 const text = $(el).text();
                 item.text = text;
                 log.info(`[START]: Related - ${text}`);
-                item.url = new URL($(el).find('a').attr('href'), `https://www.bing.com`);
+                const href = $(el).find('a').attr('href');
+                item.url = href ? new URL(href, 'https://www.bing.com').href : undefined;
                 related.push(item);
             });
             urlResults.related = related;
@@ -269,7 +271,8 @@ exports.handleStart = async ({ request, $ }, csvFriendliness) => {
             $('[data-tag=RelatedQnA.Item]').each((_0, el) => {
                 question = {};
                 question.question = $(el).find('.b_1linetrunc').attr('aria-label');
-                question.url = $(el).find('.rwrl_cred a').attr('href');
+                const href = $(el).find('.rwrl_cred a').attr('href');
+                question.url = href ? new URL(href, 'https://www.bing.com').href : undefined;
                 question.title = $(el).find('.rwrl_cred a').text();
                 log.info(`[START]: Also ask - ${question.title}`);
                 question.description = $(el).find('.rwrl_padref').text();
@@ -286,7 +289,8 @@ exports.handleStart = async ({ request, $ }, csvFriendliness) => {
                 if (title) {
                     log.info(`[START]: Explore - ${title}`);
                     slide.title = title;
-                    slide.imgUrl = new URL($(el).find('a').attr('href'), `https://www.bing.com`);
+                    const href = $(el).find('a').attr('href');
+                    slide.imgUrl = href ? new URL(href, 'https://www.bing.com').href : undefined;
                     explore.push(slide);
                 }
             });
@@ -302,7 +306,8 @@ exports.handleStart = async ({ request, $ }, csvFriendliness) => {
             if ($(rightEl).find('.disambig-outline').length > 0) {
                 const resultsFor = [];
                 $(rightEl).find('.b_vList').each((_0, el) => {
-                    const url = new URL($(el).find('a').attr('href'), `https://www.bing.com`);
+                    const href = $(el).find('a').attr('href');
+                    const url = href ? new URL(href, 'https://www.bing.com').href : undefined;
                     const title = $(el).find('.b_secondaryFocus').text();
                     const description = $(el).find('span').attr('title');
                     log.info(`[START]: Result for - ${title}`);
